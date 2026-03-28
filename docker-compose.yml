@@ -52,6 +52,7 @@ services:
     environment:
       DB_CONN: "sqlserver://sa:Mahmudur1234@job-scheduler-mssql:1433?database=JobScheduler"
       RABBIT_URL: "amqp://guest:guest@job-scheduler-rabbitmq:5672/"
+      NODE_ID: "scheduler-service-c1"
     networks:
       - job-scheduler-network
 
@@ -67,6 +68,7 @@ services:
     environment:
       DB_CONN: "sqlserver://sa:Mahmudur1234@job-scheduler-mssql:1433?database=JobScheduler"
       RABBIT_URL: "amqp://guest:guest@job-scheduler-rabbitmq:5672/"
+      NODE_ID: "worker-service-c1"
     networks:
       - job-scheduler-network
 

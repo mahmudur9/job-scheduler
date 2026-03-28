@@ -27,7 +27,7 @@ func main() {
 
 	jobExecutionRepository := db.NewJobExecutionRepository(database)
 
-	workerUsecase := usecase.NewWorkerUsecase(jobExecutionRepository, rmq.Channel(), "worker1")
+	workerUsecase := usecase.NewWorkerUsecase(jobExecutionRepository, rmq.Channel(), cf.NodeID)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

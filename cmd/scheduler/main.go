@@ -27,7 +27,7 @@ func main() {
 
 	jobRepository := db.NewJobRepository(database)
 
-	s := usecase.NewSchedulerUsecase(jobRepository, rmq, "node1")
+	s := usecase.NewSchedulerUsecase(jobRepository, rmq, cf.NodeID)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
