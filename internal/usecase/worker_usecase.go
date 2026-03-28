@@ -25,7 +25,7 @@ func NewWorkerUsecase(jobExecutionRepository repository.JobExecutionRepository, 
 }
 
 func (w *WorkerUsecase) Start(ctx context.Context) {
-	msgs, err := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
+	messages, err := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
 	if err != nil {
 		log.Println("failed to start consuming:", err)
 		return
@@ -39,7 +39,7 @@ func (w *WorkerUsecase) Start(ctx context.Context) {
 			log.Println("Worker stopping gracefully...")
 			return
 
-		case msg, ok := <-msgs:
+		case msg, ok := <-messages:
 			if !ok {
 				log.Println("RabbitMQ channel closed. Worker stopping...")
 				return
@@ -64,17 +64,17 @@ func (w *WorkerUsecase) handle(body []byte) error {
 	}
 
 	// Generate execution key
-	execKey := domain.GenerateExecutionKey(msg.JobID, msg.ScheduleTime)
+	execKey := domain.GenerateExecutionKey(msg.JobId, msg.ScheduleTime)
 
 	// EXACTLY-ONCE CHECK
-	ok, err := w.jobExecutionRepository.TryStartExecution(execKey, msg.JobID, w.workerId)
+	ok, err := w.jobExecutionRepository.TryStartExecution(execKey, msg.JobId, w.workerId)
 	if err != nil {
 		return err
 	}
 
 	if !ok {
 		// Already processed OR another worker is processing
-		log.Println("Skipping duplicate job:", msg.JobID)
+		log.Println("Skipping duplicate job:", msg.JobId)
 		return nil
 	}
 

@@ -14,7 +14,7 @@ func NewJobExecutionRepository(db *DB) *JobExecutionRepository {
 	return &JobExecutionRepository{db}
 }
 
-func (j *JobExecutionRepository) TryStartExecution(execKey string, jobID uuid.UUID, workerID string) (bool, error) {
+func (j *JobExecutionRepository) TryStartExecution(execKey string, jobID uuid.UUID, workerId string) (bool, error) {
 	tx, err := j.db.Conn.Begin()
 	if err != nil {
 		return false, err
@@ -23,10 +23,10 @@ func (j *JobExecutionRepository) TryStartExecution(execKey string, jobID uuid.UU
 	_, err = tx.Exec(`
 		INSERT INTO JobExecutions (Id, JobId, ExecutionKey, Status, WorkerId, StartedAt)
 		VALUES (NEWID(), @p1, @p2, 'STARTED', @p3, SYSDATETIME())
-	`, jobID, execKey, workerID)
+	`, jobID, execKey, workerId)
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 
 		// detect duplicate key
 		if isDuplicateKeyError(err) {

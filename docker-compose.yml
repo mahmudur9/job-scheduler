@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: job-scheduler-mssql
+    environment:
+      SA_PASSWORD: "Mahmudur1234"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1436:1433"
+    volumes:
+      - job-scheduler-data:/var/opt/mssql
+    networks:
+      - job-scheduler-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: job-scheduler-rabbitmq
+    ports:
+      - "5673:5672"   # AMQP
+      - "15673:15672" # UI
+    networks:
+      - job-scheduler-network
+
+  api-service1:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    image: api-service1
+    container_name: api-service-c1
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    environment:
+      DB_CONN: "sqlserver://sa:Mahmudur1234@job-scheduler-mssql:1433?database=JobScheduler"
+      RABBIT_URL: "amqp://guest:guest@job-scheduler-rabbitmq:5672/"
+    ports:
+      - "8081:8080"
+    networks:
+      - job-scheduler-network
+
+  scheduler-service1:
+    build:
+      context: .
+      dockerfile: scheduler.Dockerfile
+    image: scheduler-service1
+    container_name: scheduler-service-c1
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    environment:
+      DB_CONN: "sqlserver://sa:Mahmudur1234@job-scheduler-mssql:1433?database=JobScheduler"
+      RABBIT_URL: "amqp://guest:guest@job-scheduler-rabbitmq:5672/"
+    networks:
+      - job-scheduler-network
+
+  worker-service1:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    image: worker-service1
+    container_name: worker-service-c1
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    environment:
+      DB_CONN: "sqlserver://sa:Mahmudur1234@job-scheduler-mssql:1433?database=JobScheduler"
+      RABBIT_URL: "amqp://guest:guest@job-scheduler-rabbitmq:5672/"
+    networks:
+      - job-scheduler-network
+
+volumes:
+  job-scheduler-data:
+
+networks:
+  job-scheduler-network:

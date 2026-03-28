@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"job-scheduler/config"
 	"job-scheduler/internal/infrastructure/db"
 	"job-scheduler/internal/infrastructure/rabbitmq"
 	"job-scheduler/internal/usecase"
@@ -12,12 +13,14 @@ import (
 )
 
 func main() {
-	database, err := db.NewDb("sqlserver://sa:Akash@123@localhost:1433?database=JobScheduler")
+	cf := config.Load()
+
+	database, err := db.NewDb(cf.DBConn)
 	if err != nil {
 		panic(err)
 	}
 
-	rmq, err := rabbitmq.New("amqp://guest:guest@localhost:5672/")
+	rmq, err := rabbitmq.New(cf.RabbitURL)
 	if err != nil {
 		panic(err)
 	}

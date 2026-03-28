@@ -1,4 +1,30 @@
-FROM ubuntu:latest
-LABEL authors="asus"
+# ---------- Build Stage ----------
+FROM golang:1.26-alpine AS builder
 
-ENTRYPOINT ["top", "-b"]
+WORKDIR /app
+
+RUN apk add --no-cache git
+
+# Cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy all source code
+COPY . .
+
+# IMPORTANT: build from cmd/api
+RUN go build -o app ./cmd/scheduler
+
+# ---------- Runtime Stage ----------
+FROM alpine:3.19
+
+WORKDIR /app
+
+RUN apk add --no-cache ca-certificates
+
+# Copy compiled binary
+COPY --from=builder /app/app .
+
+EXPOSE 8080
+
+CMD ["./app"]

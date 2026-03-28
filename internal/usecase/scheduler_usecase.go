@@ -53,7 +53,7 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 				}
 
 				msg := domain.JobMessage{
-					JobID:        j.Id,
+					JobId:        j.Id,
 					Payload:      j.Payload,
 					ScheduleTime: j.ScheduleTime.Unix(),
 				}
