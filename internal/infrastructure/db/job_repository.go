@@ -51,13 +51,13 @@ func (j *JobRepository) FetchDueJobs(limit int) ([]domain.Job, error) {
 	return jobs, nil
 }
 
-func (j *JobRepository) MarkQueued(jobID uuid.UUID) error {
+func (j *JobRepository) MarkQueued(jobId uuid.UUID) error {
 	_, err := j.db.Conn.Exec(`
 		UPDATE Jobs
 		SET Status = 'QUEUED'
 		WHERE Id = @p1
 		  AND Status = 'SCHEDULED'
-	`, jobID)
+	`, jobId)
 
 	return err
 }

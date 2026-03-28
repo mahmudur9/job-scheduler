@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"job-scheduler/config"
 	deliveryHttp "job-scheduler/internal/delivery/http"
 	"job-scheduler/internal/infrastructure/db"
 	"job-scheduler/internal/usecase"
@@ -16,7 +17,9 @@ import (
 
 func main() {
 
-	database, _ := db.NewDb("sqlserver://sa:Akash@123@localhost:1433?database=JobScheduler")
+	cf := config.Load()
+
+	database, _ := db.NewDb(cf.DBConn)
 
 	jobRepository := db.NewJobRepository(database)
 
@@ -46,11 +49,9 @@ func main() {
 	<-stop
 	log.Println("Shutting down...")
 
-	// Create timeout context
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Graceful shutdown
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Shutdown error: %v", err)
 	}

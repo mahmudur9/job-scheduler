@@ -16,3 +16,9 @@ test:
 
 fmt:
 	go fmt ./...
+
+docker-build:
+	sudo docker compose build
+
+docker-run:
+	sudo docker compose up -d

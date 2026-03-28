@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	"job-scheduler/internal/domain"
 	"job-scheduler/internal/repository"
@@ -23,16 +24,34 @@ func NewWorkerUsecase(jobExecutionRepository repository.JobExecutionRepository, 
 	}
 }
 
-func (w *WorkerUsecase) Start() {
-	msgs, _ := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
+func (w *WorkerUsecase) Start(ctx context.Context) {
+	messages, err := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
+	if err != nil {
+		log.Println("failed to start consuming:", err)
+		return
+	}
 
-	for msg := range msgs {
-		err := w.handle(msg.Body)
+	log.Println("Worker started.")
 
-		if err != nil {
-			msg.Nack(false, true)
-		} else {
-			msg.Ack(false)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Worker stopping gracefully...")
+			return
+
+		case msg, ok := <-messages:
+			if !ok {
+				log.Println("RabbitMQ channel closed. Worker stopping...")
+				return
+			}
+
+			err := w.handle(msg.Body)
+			if err != nil {
+				log.Println("handle error:", err)
+				msg.Nack(false, true) // requeue on failure
+			} else {
+				msg.Ack(false)
+			}
 		}
 	}
 }
@@ -45,17 +64,17 @@ func (w *WorkerUsecase) handle(body []byte) error {
 	}
 
 	// Generate execution key
-	execKey := domain.GenerateExecutionKey(msg.JobID, msg.ScheduleTime)
+	execKey := domain.GenerateExecutionKey(msg.JobId, msg.ScheduleTime)
 
 	// EXACTLY-ONCE CHECK
-	ok, err := w.jobExecutionRepository.TryStartExecution(execKey, msg.JobID, w.workerId)
+	ok, err := w.jobExecutionRepository.TryStartExecution(execKey, msg.JobId, w.workerId)
 	if err != nil {
 		return err
 	}
 
 	if !ok {
 		// Already processed OR another worker is processing
-		log.Println("Skipping duplicate job:", msg.JobID)
+		log.Println("Skipping duplicate job:", msg.JobId)
 		return nil
 	}
 
