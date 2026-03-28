@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	"job-scheduler/internal/domain"
 	"job-scheduler/internal/repository"
@@ -23,16 +24,34 @@ func NewWorkerUsecase(jobExecutionRepository repository.JobExecutionRepository, 
 	}
 }
 
-func (w *WorkerUsecase) Start() {
-	msgs, _ := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
+func (w *WorkerUsecase) Start(ctx context.Context) {
+	msgs, err := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
+	if err != nil {
+		log.Println("failed to start consuming:", err)
+		return
+	}
 
-	for msg := range msgs {
-		err := w.handle(msg.Body)
+	log.Println("Worker started.")
 
-		if err != nil {
-			msg.Nack(false, true)
-		} else {
-			msg.Ack(false)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Worker stopping gracefully...")
+			return
+
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Println("RabbitMQ channel closed. Worker stopping...")
+				return
+			}
+
+			err := w.handle(msg.Body)
+			if err != nil {
+				log.Println("handle error:", err)
+				msg.Nack(false, true) // requeue on failure
+			} else {
+				msg.Ack(false)
+			}
 		}
 	}
 }

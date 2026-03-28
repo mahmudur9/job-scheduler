@@ -28,7 +28,7 @@ func (j *JobExecutionRepository) TryStartExecution(execKey string, jobID uuid.UU
 	if err != nil {
 		tx.Rollback()
 
-		// 🔥 IMPORTANT: detect duplicate key
+		// detect duplicate key
 		if isDuplicateKeyError(err) {
 			return false, nil // already being processed
 		}

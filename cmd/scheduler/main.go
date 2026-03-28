@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"job-scheduler/internal/infrastructure/db"
 	"job-scheduler/internal/infrastructure/rabbitmq"
 	"job-scheduler/internal/usecase"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -19,7 +24,22 @@ func main() {
 
 	jobRepository := db.NewJobRepository(database)
 
-	//scheduler.Run(d, q, cfg.NodeID)
 	s := usecase.NewSchedulerUsecase(jobRepository, rmq, "node1")
-	s.Run()
+
+	// Graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		sig := <-quit
+		log.Printf("Received signal: %v. Shutting down...", sig)
+		cancel()
+	}()
+
+	s.Run(ctx)
+
+	log.Println("Scheduler shut down")
 }
