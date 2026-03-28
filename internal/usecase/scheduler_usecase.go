@@ -1,0 +1,64 @@
+package usecase
+
+import (
+	"encoding/json"
+	"job-scheduler/internal/domain"
+	"job-scheduler/internal/infrastructure/rabbitmq"
+	"job-scheduler/internal/repository"
+	"log"
+	"time"
+)
+
+type SchedulerUsecase struct {
+	jobRepository repository.JobRepository
+	rabbitMq      *rabbitmq.MQ
+	nodeId        string
+}
+
+func NewSchedulerUsecase(jobRepository repository.JobRepository, rabbitMq *rabbitmq.MQ, nodeId string) *SchedulerUsecase {
+	return &SchedulerUsecase{
+		jobRepository,
+		rabbitMq,
+		nodeId,
+	}
+}
+
+func (s *SchedulerUsecase) Run() {
+	for {
+		jobs, err := s.jobRepository.FetchDueJobs(10)
+		if err != nil {
+			log.Println("fetch jobs error:", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		for _, j := range jobs {
+
+			// ✅ Build structured message
+			msg := domain.JobMessage{
+				JobID:        j.Id,
+				Payload:      j.Payload,
+				ScheduleTime: j.ScheduleTime.Unix(), // 🔥 IMPORTANT
+			}
+
+			body, err := json.Marshal(msg)
+			if err != nil {
+				log.Println("marshal error:", err)
+				continue
+			}
+
+			// ✅ Publish to RabbitMQ
+			err = s.rabbitMq.Publish(body)
+			if err != nil {
+				log.Println("publish error:", err)
+				continue
+			}
+
+			// ✅ Mark job as queued (prevent duplicate enqueue)
+			err = s.jobRepository.MarkQueued(j.Id)
+			if err != nil {
+				log.Println("mark queued error:", err)
+			}
+		}
+	}
+}

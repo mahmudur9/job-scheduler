@@ -2,6 +2,8 @@ package db
 
 import (
 	"job-scheduler/internal/domain"
+
+	"github.com/google/uuid"
 )
 
 type JobRepository struct {
@@ -17,6 +19,45 @@ func (j *JobRepository) CreateJob(job *domain.Job) error {
 		INSERT INTO Jobs (Id, Payload, ScheduleTime, Status, CreatedAt)
 		VALUES (NEWID(), @p1, @p2, @p3, @p4)
 	`, job.Payload, job.ScheduleTime, job.Status, job.CreatedAt)
+
+	return err
+}
+
+func (j *JobRepository) FetchDueJobs(limit int) ([]domain.Job, error) {
+	rows, err := j.db.Conn.Query(`
+		UPDATE TOP (@p1) Jobs
+		SET Status = 'QUEUED'
+		OUTPUT inserted.Id, inserted.Payload, inserted.ScheduleTime
+		WHERE Status = 'SCHEDULED'
+		  AND ScheduleTime <= SYSDATETIME()
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var jobs []domain.Job
+
+	for rows.Next() {
+		var j domain.Job
+		err := rows.Scan(&j.Id, &j.Payload, &j.ScheduleTime)
+		if err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, j)
+	}
+
+	return jobs, nil
+}
+
+func (j *JobRepository) MarkQueued(jobID uuid.UUID) error {
+	_, err := j.db.Conn.Exec(`
+		UPDATE Jobs
+		SET Status = 'QUEUED'
+		WHERE Id = @p1
+		  AND Status = 'SCHEDULED'
+	`, jobID)
 
 	return err
 }
