@@ -25,11 +25,11 @@ func (j *JobRepository) CreateJob(job *domain.Job) error {
 
 func (j *JobRepository) FetchDueJobs(limit int) ([]domain.Job, error) {
 	rows, err := j.db.Conn.Query(`
-		UPDATE TOP (@p1) Jobs
-		SET Status = 'QUEUED'
-		OUTPUT inserted.Id, inserted.Payload, inserted.ScheduleTime
+		SELECT TOP (@p1) Id, Payload, ScheduleTime
+		FROM Jobs
 		WHERE Status = 'SCHEDULED'
 		  AND ScheduleTime <= SYSDATETIME()
+		ORDER BY ScheduleTime ASC
 	`, limit)
 
 	if err != nil {
