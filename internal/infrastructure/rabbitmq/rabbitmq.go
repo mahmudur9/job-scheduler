@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"errors"
 	"fmt"
 	"job-scheduler/internal/usecase"
 	"log"
@@ -12,7 +13,6 @@ import (
 
 const (
 	reconnectDelay = 5 * time.Second
-	maxRetries     = 7200
 )
 
 type RabbitMQ struct {
@@ -24,7 +24,6 @@ type RabbitMQ struct {
 	closeCh chan struct{}
 }
 
-// New creates a new RabbitMQ instance and establishes the initial connection.
 func New(url string) (*RabbitMQ, error) {
 	mq := &RabbitMQ{
 		url:     url,
@@ -36,135 +35,151 @@ func New(url string) (*RabbitMQ, error) {
 	return mq, nil
 }
 
-// connect (re)establishes the AMQP connection and channel, then declares the
-// queue. It is safe to call multiple times.
 func (m *RabbitMQ) connect() error {
 	conn, err := amqp091.Dial(m.url)
 	if err != nil {
 		return err
 	}
+
 	ch, err := conn.Channel()
 	if err != nil {
 		conn.Close()
 		return err
 	}
-	if _, err = ch.QueueDeclare("jobs", true, false, false, false, nil); err != nil {
+
+	if err := ch.Qos(1, 0, false); err != nil {
 		ch.Close()
 		conn.Close()
 		return err
 	}
 
+	_, err = ch.QueueDeclare("jobs", true, false, false, false, nil)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return err
+	}
+
+	// ✅ swap safely and close old resources
 	m.mu.Lock()
+	oldConn := m.conn
+	oldCh := m.ch
+
 	m.conn = conn
 	m.ch = ch
 	m.mu.Unlock()
 
-	// Watch for connection-level errors and trigger reconnect.
+	if oldCh != nil {
+		oldCh.Close()
+	}
+	if oldConn != nil {
+		oldConn.Close()
+	}
+
 	go m.watchConnection(conn)
+	go m.watchChannel(ch)
+
 	return nil
 }
 
-// watchConnection blocks until the connection closes, then reconnects unless
-// the RabbitMQ instance itself has been shut down.
+// watch connection close
 func (m *RabbitMQ) watchConnection(conn *amqp091.Connection) {
-	connErr := make(chan *amqp091.Error, 1)
-	conn.NotifyClose(connErr)
+	errCh := make(chan *amqp091.Error, 1)
+	conn.NotifyClose(errCh)
 
 	select {
-	case err, ok := <-connErr:
-		if !ok || err == nil {
-			// Clean close — nothing to do.
-			return
+	case err := <-errCh:
+		if err != nil {
+			log.Printf("[rabbitmq] connection lost: %v", err)
+			m.reconnectLoop()
 		}
-		log.Printf("[rabbitmq] connection lost: %v — reconnecting…", err)
 	case <-m.closeCh:
-		return
 	}
-
-	m.reconnectLoop()
 }
 
-// reconnectLoop retries connect() with a fixed back-off until it succeeds or
-// the RabbitMQ instance is closed.
+// 🔥 watch channel close (important!)
+func (m *RabbitMQ) watchChannel(ch *amqp091.Channel) {
+	errCh := make(chan *amqp091.Error, 1)
+	ch.NotifyClose(errCh)
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			log.Printf("[rabbitmq] channel closed: %v", err)
+			m.reconnectLoop()
+		}
+	case <-m.closeCh:
+	}
+}
+
 func (m *RabbitMQ) reconnectLoop() {
-	for attempt := 1; attempt <= maxRetries; attempt++ {
+	for {
 		select {
 		case <-m.closeCh:
 			return
 		case <-time.After(reconnectDelay):
 		}
 
-		log.Printf("[rabbitmq] reconnect attempt %d/%d", attempt, maxRetries)
+		log.Println("[rabbitmq] reconnecting...")
+
 		if err := m.connect(); err != nil {
-			log.Printf("[rabbitmq] reconnect attempt %d failed: %v", attempt, err)
+			log.Printf("[rabbitmq] reconnect failed: %v", err)
 			continue
 		}
-		log.Printf("[rabbitmq] reconnected successfully on attempt %d", attempt)
+
+		log.Println("[rabbitmq] reconnected successfully")
 		return
 	}
-	log.Printf("[rabbitmq] giving up after %d reconnect attempts", maxRetries)
 }
 
-// channel returns the current channel under a read-lock.
-func (m *RabbitMQ) channel() *amqp091.Channel {
-	m.mu.RLock() // No one can modify it while reading. Multiple readers can read concurrently
+// safer access
+func (m *RabbitMQ) getChannel() (*amqp091.Channel, error) {
+	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.ch
+
+	if m.ch == nil || m.ch.IsClosed() {
+		return nil, errors.New("channel not available")
+	}
+	return m.ch, nil
 }
 
-// Consume starts consuming from queueName and feeds messages into the returned
-// channel. When the underlying AMQP delivery channel closes (e.g. on
-// disconnect), it waits for reconnection and re-subscribes automatically.
-func (m *RabbitMQ) Consume(queueName string) (<-chan usecase.Message, error) {
-	// Validate the initial subscription works before returning.
-	if _, err := m.channel().Consume(queueName, "", false, false, false, false, nil); err != nil {
-		return nil, err
-	}
-
+func (m *RabbitMQ) Consume(queue string) (<-chan usecase.Message, error) {
 	out := make(chan usecase.Message)
-	go m.consumeLoop(queueName, out)
+	go m.consumeLoop(queue, out)
 	return out, nil
 }
 
-// consumeLoop re-subscribes whenever the delivery channel is closed and
-// forwards messages to out until RabbitMQ.Close() is called.
-func (m *RabbitMQ) consumeLoop(queueName string, out chan<- usecase.Message) {
+func (m *RabbitMQ) consumeLoop(queue string, out chan<- usecase.Message) {
 	defer close(out)
 
 	for {
-		amqpMsgs, err := m.channel().Consume(queueName, "", false, false, false, false, nil)
+		ch, err := m.getChannel()
 		if err != nil {
-			log.Printf("[rabbitmq] consume error: %v — waiting for reconnect", err)
 			if !m.waitForReconnect() {
-				return // MQ was closed
+				return
 			}
 			continue
 		}
 
-		// Forward messages until the delivery channel closes.
-		for msg := range amqpMsgs {
+		msgs, err := ch.Consume(queue, "", false, false, false, false, nil)
+		if err != nil {
+			log.Printf("[rabbitmq] consume error: %v", err)
+			if !m.waitForReconnect() {
+				return
+			}
+			continue
+		}
+
+		for msg := range msgs {
 			select {
 			case out <- &AMQPMessage{msg}:
 			case <-m.closeCh:
 				return
 			}
 		}
-
-		// amqpMsgs was closed — check if we should stop or reconnect.
-		select {
-		case <-m.closeCh:
-			return
-		default:
-			log.Printf("[rabbitmq] delivery channel closed — waiting for reconnect")
-			if !m.waitForReconnect() {
-				return
-			}
-		}
 	}
 }
 
-// waitForReconnect polls until the channel is healthy again or RabbitMQ is closed.
-// Returns false when RabbitMQ.Close() has been called.
 func (m *RabbitMQ) waitForReconnect() bool {
 	for {
 		select {
@@ -172,53 +187,56 @@ func (m *RabbitMQ) waitForReconnect() bool {
 			return false
 		case <-time.After(reconnectDelay):
 			m.mu.RLock()
-			ch := m.ch
+			ok := m.ch != nil && !m.ch.IsClosed()
 			m.mu.RUnlock()
-			if ch != nil && !ch.IsClosed() {
+			if ok {
 				return true
 			}
 		}
 	}
 }
 
-// Publish sends body to the "jobs" queue. It retries once after a short delay
-// if the channel is currently unavailable due to an ongoing reconnect.
 func (m *RabbitMQ) Publish(body []byte) error {
-	publish := func() error {
-		m.mu.RLock()
-		ch := m.ch
-		m.mu.RUnlock()
-		if ch == nil || ch.IsClosed() {
-			return fmt.Errorf("channel not available")
+	for i := 0; i < 2; i++ {
+		ch, err := m.getChannel()
+		if err != nil {
+			log.Printf("[rabbitmq] publish: channel unavailable")
+		} else {
+			err = ch.Publish(
+				"",
+				"jobs",
+				false,
+				false,
+				amqp091.Publishing{
+					DeliveryMode: amqp091.Persistent,
+					Body:         body,
+				},
+			)
+			if err == nil {
+				return nil
+			}
+			log.Printf("[rabbitmq] publish failed: %v", err)
 		}
-		return ch.Publish("", "jobs", false, false,
-			amqp091.Publishing{
-				DeliveryMode: amqp091.Persistent,
-				Body:         body,
-			})
-	}
 
-	if err := publish(); err != nil {
-		log.Printf("[rabbitmq] publish failed: %v — retrying after delay", err)
 		select {
 		case <-m.closeCh:
-			return err
+			return fmt.Errorf("mq closed")
 		case <-time.After(reconnectDelay):
 		}
-		return publish()
 	}
-	return nil
+	return fmt.Errorf("publish failed after retry")
 }
 
-// Close gracefully shuts down the RabbitMQ instance.
 func (m *RabbitMQ) Close() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if m.closed {
 		return
 	}
 	m.closed = true
 	close(m.closeCh)
+
 	if m.ch != nil {
 		m.ch.Close()
 	}
@@ -227,7 +245,6 @@ func (m *RabbitMQ) Close() {
 	}
 }
 
-// AMQPMessage wraps an amqp091.Delivery to satisfy the usecase.Message interface.
 type AMQPMessage struct {
 	amqp091.Delivery
 }
