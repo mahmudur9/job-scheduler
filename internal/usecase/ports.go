@@ -1,4 +1,4 @@
-package repository
+package usecase
 
 import (
 	"job-scheduler/internal/domain"
@@ -10,4 +10,12 @@ type JobRepository interface {
 	CreateJob(job *domain.Job) error
 	FetchDueJobs(limit int) ([]domain.Job, error)
 	MarkQueued(jobID uuid.UUID) error
+}
+
+type JobExecutionRepository interface {
+	TryStartExecution(execKey string, jobID uuid.UUID, workerID string) (bool, error)
+}
+
+type JobQueue interface {
+	Publish(body []byte) error
 }

@@ -4,22 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"job-scheduler/internal/domain"
-	"job-scheduler/internal/infrastructure/rabbitmq"
-	"job-scheduler/internal/repository"
 	"log"
 	"time"
 )
 
 type SchedulerUsecase struct {
-	jobRepository repository.JobRepository
-	rabbitMq      *rabbitmq.MQ
+	jobRepository JobRepository
+	jobQueue      JobQueue
 	nodeId        string
 }
 
-func NewSchedulerUsecase(jobRepository repository.JobRepository, rabbitMq *rabbitmq.MQ, nodeId string) *SchedulerUsecase {
+func NewSchedulerUsecase(jobRepository JobRepository, jobQueue JobQueue, nodeId string) *SchedulerUsecase {
 	return &SchedulerUsecase{
 		jobRepository,
-		rabbitMq,
+		jobQueue,
 		nodeId,
 	}
 }
@@ -64,7 +62,7 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 					continue
 				}
 
-				err = s.rabbitMq.Publish(body)
+				err = s.jobQueue.Publish(body)
 				if err != nil {
 					log.Println("publish error:", err)
 					continue

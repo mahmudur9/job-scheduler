@@ -4,19 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"job-scheduler/internal/domain"
-	"job-scheduler/internal/repository"
 	"log"
 
 	"github.com/rabbitmq/amqp091-go"
 )
 
 type WorkerUsecase struct {
-	jobExecutionRepository repository.JobExecutionRepository
+	jobExecutionRepository JobExecutionRepository
 	rmqChannel             *amqp091.Channel
 	workerId               string
 }
 
-func NewWorkerUsecase(jobExecutionRepository repository.JobExecutionRepository, rmqChannel *amqp091.Channel, workerId string) *WorkerUsecase {
+func NewWorkerUsecase(jobExecutionRepository JobExecutionRepository, rmqChannel *amqp091.Channel, workerId string) *WorkerUsecase {
 	return &WorkerUsecase{
 		jobExecutionRepository,
 		rmqChannel,

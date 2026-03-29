@@ -5,37 +5,16 @@ import (
 	"job-scheduler/internal/domain"
 	"job-scheduler/internal/requests"
 	"job-scheduler/internal/usecase"
+	"job-scheduler/tests/mocks"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// ---- Mock Repository ----
-
-type MockJobRepository struct {
-	CreateJobFunc    func(job *domain.Job) error
-	FetchDueJobsFunc func(limit int) ([]domain.Job, error)
-	MarkQueuedFunc   func(jobID uuid.UUID) error
-}
-
-func (m *MockJobRepository) CreateJob(job *domain.Job) error {
-	return m.CreateJobFunc(job)
-}
-
-func (m *MockJobRepository) FetchDueJobs(limit int) ([]domain.Job, error) {
-	return m.FetchDueJobsFunc(limit)
-}
-
-func (m *MockJobRepository) MarkQueued(jobID uuid.UUID) error {
-	return m.MarkQueuedFunc(jobID)
-}
-
-// ---- Test ----
-
 func TestJobUsecase_Create_Success(t *testing.T) {
 	// Arrange
-	mockRepo := &MockJobRepository{}
+	mockRepo := &mocks.MockJobRepository{}
 
 	var capturedJob *domain.Job
 
@@ -86,7 +65,7 @@ func TestJobUsecase_Create_Success(t *testing.T) {
 
 func TestJobUsecase_Create_RepositoryError(t *testing.T) {
 	// Arrange
-	mockRepo := &MockJobRepository{}
+	mockRepo := &mocks.MockJobRepository{}
 
 	expectedErr := errors.New("db error")
 
