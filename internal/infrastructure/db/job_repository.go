@@ -57,7 +57,7 @@ func (j *JobRepository) MarkQueued(jobId uuid.UUID) error {
 		SET Status = 'QUEUED'
 		WHERE Id = @p1
 		  AND Status = 'SCHEDULED'
-	`, jobId)
+	`, jobId[:])
 
 	return err
 }

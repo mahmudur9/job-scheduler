@@ -23,7 +23,7 @@ func (j *JobExecutionRepository) TryStartExecution(execKey string, jobID uuid.UU
 	_, err = tx.Exec(`
 		INSERT INTO JobExecutions (Id, JobId, ExecutionKey, Status, WorkerId, StartedAt)
 		VALUES (NEWID(), @p1, @p2, 'STARTED', @p3, SYSDATETIME())
-	`, jobID, execKey, workerId)
+	`, jobID[:], execKey, workerId)
 
 	if err != nil {
 		_ = tx.Rollback()
