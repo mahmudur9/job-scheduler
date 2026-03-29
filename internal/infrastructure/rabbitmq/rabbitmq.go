@@ -47,7 +47,7 @@ func (m *RabbitMQ) connect() error {
 		return err
 	}
 
-	if err := ch.Qos(1, 0, false); err != nil {
+	if err := ch.Qos(1, 0, false); err != nil { // Each worker will do one job at a time.
 		ch.Close()
 		conn.Close()
 		return err
@@ -82,7 +82,6 @@ func (m *RabbitMQ) connect() error {
 	return nil
 }
 
-// watch connection close
 func (m *RabbitMQ) watchConnection(conn *amqp091.Connection) {
 	errCh := make(chan *amqp091.Error, 1)
 	conn.NotifyClose(errCh)
@@ -97,7 +96,6 @@ func (m *RabbitMQ) watchConnection(conn *amqp091.Connection) {
 	}
 }
 
-// 🔥 watch channel close (important!)
 func (m *RabbitMQ) watchChannel(ch *amqp091.Channel) {
 	errCh := make(chan *amqp091.Error, 1)
 	ch.NotifyClose(errCh)
@@ -134,7 +132,7 @@ func (m *RabbitMQ) reconnectLoop() {
 
 // safer access
 func (m *RabbitMQ) getChannel() (*amqp091.Channel, error) {
-	m.mu.RLock()
+	m.mu.RLock() // No one will be able to modify the channel while accessing it
 	defer m.mu.RUnlock()
 
 	if m.ch == nil || m.ch.IsClosed() {
