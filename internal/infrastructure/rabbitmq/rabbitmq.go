@@ -225,6 +225,24 @@ func (m *RabbitMQ) Publish(body []byte) error {
 	return fmt.Errorf("publish failed after retry")
 }
 
+func (m *RabbitMQ) Close() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.closed {
+		return
+	}
+	m.closed = true
+	close(m.closeCh)
+
+	if m.ch != nil {
+		m.ch.Close()
+	}
+	if m.conn != nil {
+		m.conn.Close()
+	}
+}
+
 type AMQPMessage struct {
 	amqp091.Delivery
 }

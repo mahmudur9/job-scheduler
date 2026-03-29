@@ -33,6 +33,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer rmq.Close()
 
 	jobRepository := db.NewJobRepository(database)
 
