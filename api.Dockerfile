@@ -27,6 +27,9 @@ RUN apk add --no-cache ca-certificates
 # Copy compiled binary
 COPY --from=builder /app/app .
 
+# Copy migration SQL files
+COPY --from=builder /app/internal/migrations/ ./internal/migrations/
+
 EXPOSE 8080
 
 CMD ["./app"]
