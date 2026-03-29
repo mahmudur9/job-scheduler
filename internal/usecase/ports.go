@@ -19,3 +19,13 @@ type JobExecutionRepository interface {
 type JobQueue interface {
 	Publish(body []byte) error
 }
+
+type JobConsumer interface {
+	Consume(queueName string) (<-chan Message, error)
+}
+
+type Message interface {
+	Body() []byte
+	Ack() error
+	Nack(requeue bool) error
+}

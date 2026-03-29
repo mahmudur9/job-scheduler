@@ -5,26 +5,24 @@ import (
 	"encoding/json"
 	"job-scheduler/internal/domain"
 	"log"
-
-	"github.com/rabbitmq/amqp091-go"
 )
 
 type WorkerUsecase struct {
 	jobExecutionRepository JobExecutionRepository
-	rmqChannel             *amqp091.Channel
+	jobConsumer            JobConsumer
 	workerId               string
 }
 
-func NewWorkerUsecase(jobExecutionRepository JobExecutionRepository, rmqChannel *amqp091.Channel, workerId string) *WorkerUsecase {
+func NewWorkerUsecase(jobExecutionRepository JobExecutionRepository, jobConsumer JobConsumer, workerId string) *WorkerUsecase {
 	return &WorkerUsecase{
 		jobExecutionRepository,
-		rmqChannel,
+		jobConsumer,
 		workerId,
 	}
 }
 
 func (w *WorkerUsecase) Start(ctx context.Context) {
-	messages, err := w.rmqChannel.Consume("jobs", "", false, false, false, false, nil)
+	messages, err := w.jobConsumer.Consume("jobs")
 	if err != nil {
 		log.Println("failed to start consuming:", err)
 		return
@@ -44,12 +42,12 @@ func (w *WorkerUsecase) Start(ctx context.Context) {
 				return
 			}
 
-			err := w.handle(msg.Body)
+			err := w.handle(msg.Body())
 			if err != nil {
 				log.Println("handle error:", err)
-				msg.Nack(false, true) // requeue on failure
+				_ = msg.Nack(true) // requeue on failure
 			} else {
-				msg.Ack(false)
+				_ = msg.Ack()
 			}
 		}
 	}
