@@ -14,9 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//
 // ---- MOCKS ----
-//
 
 type MockMessage struct {
 	body []byte
@@ -52,9 +50,7 @@ func (m *MockConsumer) Consume(queueName string) (<-chan usecase.Message, error)
 	return m.Messages, nil
 }
 
-//
 // ---- TESTS ----
-//
 
 func TestWorker_Start_Success(t *testing.T) {
 	jobID := uuid.New()
