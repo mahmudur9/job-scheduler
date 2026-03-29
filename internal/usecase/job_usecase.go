@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"job-scheduler/internal/domain"
-	"job-scheduler/internal/repository"
 	"job-scheduler/internal/requests"
 	"time"
 
@@ -10,10 +9,10 @@ import (
 )
 
 type JobUsecase struct {
-	jobRepository repository.JobRepository
+	jobRepository JobRepository
 }
 
-func NewJobUsecase(jobRepository repository.JobRepository) *JobUsecase {
+func NewJobUsecase(jobRepository JobRepository) *JobUsecase {
 	return &JobUsecase{
 		jobRepository,
 	}

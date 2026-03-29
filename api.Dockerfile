@@ -12,6 +12,8 @@ RUN go mod download
 # Copy all source code
 COPY . .
 
+RUN go test -v ./tests
+
 # IMPORTANT: build from cmd/api
 RUN go build -o app ./cmd/api
 
