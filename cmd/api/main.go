@@ -6,6 +6,7 @@ import (
 	"job-scheduler/config"
 	deliveryHttp "job-scheduler/internal/delivery/http"
 	"job-scheduler/internal/infrastructure/db"
+	"job-scheduler/internal/migrations"
 	"job-scheduler/internal/usecase"
 	"log"
 	"net/http"
@@ -13,12 +14,22 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found")
+	}
+}
 
 func main() {
 
 	cf := config.Load()
 
+	migrations.RunMigration(cf.DBConn)
 	database, _ := db.NewDb(cf.DBConn)
 
 	jobRepository := db.NewJobRepository(database)
