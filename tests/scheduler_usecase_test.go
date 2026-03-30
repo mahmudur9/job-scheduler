@@ -17,7 +17,7 @@ func TestScheduler_Run_Success(t *testing.T) {
 	jobID := uuid.New()
 
 	mockRepo := &mocks.MockJobRepository{
-		FetchDueJobsFn: func(limit int) ([]domain.Job, error) {
+		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
 			return []domain.Job{
 				{
 					Id:           jobID,
@@ -26,7 +26,7 @@ func TestScheduler_Run_Success(t *testing.T) {
 				},
 			}, nil
 		},
-		MarkQueuedFn: func(jobID uuid.UUID) error {
+		MarkScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}
@@ -56,10 +56,6 @@ func TestScheduler_Run_Success(t *testing.T) {
 		t.Fatal("expected Publish to be called")
 	}
 
-	if mockRepo.MarkCalled == 0 {
-		t.Fatal("expected MarkQueued to be called")
-	}
-
 	// Validate message format
 	if len(mockQueue.Messages) > 0 {
 		var msg domain.JobMessage
@@ -76,10 +72,10 @@ func TestScheduler_Run_Success(t *testing.T) {
 
 func TestScheduler_Run_FetchError(t *testing.T) {
 	mockRepo := &mocks.MockJobRepository{
-		FetchDueJobsFn: func(limit int) ([]domain.Job, error) {
+		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
 			return nil, errors.New("db error")
 		},
-		MarkQueuedFn: func(jobID uuid.UUID) error {
+		MarkScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}
@@ -114,7 +110,7 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 	jobID := uuid.New()
 
 	mockRepo := &mocks.MockJobRepository{
-		FetchDueJobsFn: func(limit int) ([]domain.Job, error) {
+		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
 			return []domain.Job{
 				{
 					Id:           jobID,
@@ -123,7 +119,7 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 				},
 			}, nil
 		},
-		MarkQueuedFn: func(jobID uuid.UUID) error {
+		MarkScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}
@@ -149,18 +145,18 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 		t.Fatal("expected publish to be attempted")
 	}
 
-	if mockRepo.MarkCalled != 0 {
-		t.Fatal("MarkQueued should not be called when publish fails")
+	if mockRepo.MarkCalled == 0 {
+		t.Fatal("MarkQueued should be called when publish fails")
 	}
 }
 
 func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 	mockRepo := &mocks.MockJobRepository{
-		FetchDueJobsFn: func(limit int) ([]domain.Job, error) {
+		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
 			time.Sleep(2 * time.Second) // simulate slow DB
 			return nil, nil
 		},
-		MarkQueuedFn: func(jobID uuid.UUID) error {
+		MarkScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}

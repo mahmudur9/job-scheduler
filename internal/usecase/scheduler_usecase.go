@@ -35,7 +35,7 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 			return
 
 		case <-ticker.C:
-			jobs, err := s.jobRepository.FetchDueJobs(10)
+			jobs, err := s.jobRepository.FetchAndMarkQueued(10)
 			if err != nil {
 				log.Println("fetch jobs error:", err)
 				continue
@@ -63,14 +63,14 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 				}
 
 				err = s.jobQueue.Publish(body)
-				if err != nil {
-					log.Println("publish error:", err)
+				if err == nil {
 					continue
 				}
+				log.Println("publish error:", err)
 
-				err = s.jobRepository.MarkQueued(j.Id)
+				err = s.jobRepository.MarkScheduled(j.Id)
 				if err != nil {
-					log.Println("mark queued error:", err)
+					log.Println("mark scheduled error:", err)
 				}
 			}
 		}

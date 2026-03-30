@@ -8,8 +8,8 @@ import (
 
 type JobRepository interface {
 	CreateJob(job *domain.Job) error
-	FetchDueJobs(limit int) ([]domain.Job, error)
-	MarkQueued(jobID uuid.UUID) error
+	FetchAndMarkQueued(limit int) ([]domain.Job, error)
+	MarkScheduled(jobID uuid.UUID) error
 }
 
 type JobExecutionRepository interface {
