@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"job-scheduler/internal/domain"
 
 	"github.com/google/uuid"
@@ -8,12 +9,18 @@ import (
 
 type JobRepository interface {
 	CreateJob(job *domain.Job) error
-	FetchDueJobs(limit int) ([]domain.Job, error)
-	MarkQueued(jobID uuid.UUID) error
+	FetchAndMarkQueued(limit int) ([]domain.Job, error)
+	MarkScheduled(jobID uuid.UUID) error
 }
 
 type JobExecutionRepository interface {
 	TryStartExecution(execKey string, jobID uuid.UUID, workerID string) (bool, error)
+}
+
+type LockRepository interface {
+	TryAcquire(ctx context.Context, nodeId string) (bool, error)
+	Renew(ctx context.Context, nodeId string) error
+	Release(ctx context.Context, nodeId string) error
 }
 
 type JobQueue interface {

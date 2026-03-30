@@ -1,16 +1,17 @@
-package db
+package repository
 
 import (
 	"job-scheduler/internal/domain"
+	db2 "job-scheduler/internal/infrastructure/db"
 
 	"github.com/google/uuid"
 )
 
 type JobRepository struct {
-	db *DB
+	db *db2.DB
 }
 
-func NewJobRepository(db *DB) *JobRepository {
+func NewJobRepository(db *db2.DB) *JobRepository {
 	return &JobRepository{db}
 }
 
@@ -23,13 +24,13 @@ func (j *JobRepository) CreateJob(job *domain.Job) error {
 	return err
 }
 
-func (j *JobRepository) FetchDueJobs(limit int) ([]domain.Job, error) {
+func (j *JobRepository) FetchAndMarkQueued(limit int) ([]domain.Job, error) {
 	rows, err := j.db.Conn.Query(`
-		SELECT TOP (@p1) Id, Payload, ScheduleTime
-		FROM Jobs
+		UPDATE TOP (@p1) Jobs
+		SET Status = 'QUEUED'
+		OUTPUT INSERTED.Id, INSERTED.Payload, INSERTED.ScheduleTime
 		WHERE Status = 'SCHEDULED'
-		  AND ScheduleTime <= SYSDATETIME()
-		ORDER BY ScheduleTime ASC
+		  AND ScheduleTime <= SYSUTCDATETIME()
 	`, limit)
 
 	if err != nil {
@@ -51,12 +52,12 @@ func (j *JobRepository) FetchDueJobs(limit int) ([]domain.Job, error) {
 	return jobs, nil
 }
 
-func (j *JobRepository) MarkQueued(jobId uuid.UUID) error {
+func (j *JobRepository) MarkScheduled(jobId uuid.UUID) error {
 	_, err := j.db.Conn.Exec(`
 		UPDATE Jobs
-		SET Status = 'QUEUED'
+		SET Status = 'SCHEDULED'
 		WHERE Id = @p1
-		  AND Status = 'SCHEDULED'
+		  AND Status = 'QUEUED'
 	`, jobId[:])
 
 	return err

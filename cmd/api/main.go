@@ -6,6 +6,7 @@ import (
 	"job-scheduler/config"
 	deliveryHttp "job-scheduler/internal/delivery/http"
 	"job-scheduler/internal/infrastructure/db"
+	"job-scheduler/internal/infrastructure/repository"
 	"job-scheduler/internal/migrations"
 	"job-scheduler/internal/usecase"
 	"log"
@@ -32,7 +33,7 @@ func main() {
 	migrations.RunMigration(cf.DBConn)
 	database, _ := db.NewDb(cf.DBConn)
 
-	jobRepository := db.NewJobRepository(database)
+	jobRepository := repository.NewJobRepository(database)
 
 	jobUsecase := usecase.NewJobUsecase(jobRepository)
 
