@@ -36,9 +36,10 @@ func main() {
 	}
 	defer rmq.Close()
 
-	jobRepository := repository.NewJobRepository(database)
+	jobRepo := repository.NewJobRepository(database)
+	lockRepo := repository.NewLockRepository(database)
 
-	s := usecase.NewSchedulerUsecase(jobRepository, rmq, cf.NodeID)
+	s := usecase.NewSchedulerUsecase(jobRepo, lockRepo, rmq, cf.NodeID)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

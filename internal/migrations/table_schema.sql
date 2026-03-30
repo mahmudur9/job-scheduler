@@ -35,3 +35,9 @@ CREATE TABLE SchedulerLock
     LockedBy NVARCHAR(255)
 );
 END;
+
+IF NOT EXISTS (SELECT 1 FROM SchedulerLock WHERE Id = 1)
+BEGIN
+INSERT INTO SchedulerLock (Id, LockedAt, LockedBy)
+VALUES (1, NULL, NULL)
+END

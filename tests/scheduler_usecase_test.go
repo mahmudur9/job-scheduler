@@ -16,7 +16,7 @@ import (
 func TestScheduler_Run_Success(t *testing.T) {
 	jobID := uuid.New()
 
-	mockRepo := &mocks.MockJobRepository{
+	mockJobRepo := &mocks.MockJobRepository{
 		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
 			return []domain.Job{
 				{
@@ -31,25 +31,37 @@ func TestScheduler_Run_Success(t *testing.T) {
 		},
 	}
 
+	mockLockRepo := &mocks.MockLockRepository{
+		TryAcquireFn: func(ctx context.Context, nodeId string) (bool, error) {
+			return true, nil
+		},
+		RenewFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+		ReleaseFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+	}
+
 	mockQueue := &mocks.MockJobQueue{
 		PublishFn: func(body []byte) error {
 			return nil
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockJobRepo, mockLockRepo, mockQueue, "node-1")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(1500 * time.Millisecond)
+		time.Sleep(7 * time.Second)
 		cancel()
 	}()
 
 	s.Run(ctx)
 
-	if mockRepo.FetchCalled == 0 {
-		t.Fatal("expected FetchDueJobs to be called")
+	if mockJobRepo.FetchCalled == 0 {
+		t.Fatal("expected FetchAndMarkQueued to be called")
 	}
 
 	if mockQueue.PublishCalled == 0 {
@@ -80,18 +92,30 @@ func TestScheduler_Run_FetchError(t *testing.T) {
 		},
 	}
 
+	mockLockRepo := &mocks.MockLockRepository{
+		TryAcquireFn: func(ctx context.Context, nodeId string) (bool, error) {
+			return true, nil
+		},
+		ReleaseFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+		RenewFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+	}
+
 	mockQueue := &mocks.MockJobQueue{
 		PublishFn: func(body []byte) error {
 			return nil
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(1200 * time.Millisecond)
+		time.Sleep(7 * time.Second)
 		cancel()
 	}()
 
@@ -124,18 +148,30 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 		},
 	}
 
+	mockLockRepo := &mocks.MockLockRepository{
+		TryAcquireFn: func(ctx context.Context, nodeId string) (bool, error) {
+			return true, nil
+		},
+		ReleaseFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+		RenewFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+	}
+
 	mockQueue := &mocks.MockJobQueue{
 		PublishFn: func(body []byte) error {
 			return errors.New("queue down")
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(1200 * time.Millisecond)
+		time.Sleep(7 * time.Second)
 		cancel()
 	}()
 
@@ -153,10 +189,22 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 	mockRepo := &mocks.MockJobRepository{
 		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
-			time.Sleep(2 * time.Second) // simulate slow DB
+			time.Sleep(7 * time.Second) // simulate slow DB
 			return nil, nil
 		},
 		MarkScheduledFn: func(jobID uuid.UUID) error {
+			return nil
+		},
+	}
+
+	mockLockRepo := &mocks.MockLockRepository{
+		TryAcquireFn: func(ctx context.Context, nodeId string) (bool, error) {
+			return true, nil
+		},
+		ReleaseFn: func(ctx context.Context, nodeId string) error {
+			return nil
+		},
+		RenewFn: func(ctx context.Context, nodeId string) error {
 			return nil
 		},
 	}
@@ -167,7 +215,7 @@ func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
