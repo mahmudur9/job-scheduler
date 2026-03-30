@@ -1,3 +1,5 @@
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Jobs')
+BEGIN
 CREATE TABLE Jobs
 (
     Id           UNIQUEIDENTIFIER PRIMARY KEY,
@@ -6,7 +8,11 @@ CREATE TABLE Jobs
     Status       NVARCHAR(50),
     CreatedAt    DATETIME2
 );
+END;
 
+-- Create JobExecutions table if not exists
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'JobExecutions')
+BEGIN
 CREATE TABLE JobExecutions
 (
     Id           UNIQUEIDENTIFIER PRIMARY KEY,
@@ -17,10 +23,15 @@ CREATE TABLE JobExecutions
     StartedAt    DATETIME2,
     FinishedAt   DATETIME2
 );
+END;
 
+-- Create SchedulerLock table if not exists
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'SchedulerLock')
+BEGIN
 CREATE TABLE SchedulerLock
 (
     Id       INT PRIMARY KEY,
     LockedAt DATETIME2,
     LockedBy NVARCHAR(255)
 );
+END;

@@ -29,8 +29,8 @@ func main() {
 
 	cf := config.Load()
 
+	migrations.RunMigration(cf.DBConn)
 	database, _ := db.NewDb(cf.DBConn)
-	migrations.RunMigration(database)
 
 	jobRepository := db.NewJobRepository(database)
 
