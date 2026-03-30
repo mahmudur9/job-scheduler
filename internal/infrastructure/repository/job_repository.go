@@ -1,16 +1,17 @@
-package db
+package repository
 
 import (
 	"job-scheduler/internal/domain"
+	db2 "job-scheduler/internal/infrastructure/db"
 
 	"github.com/google/uuid"
 )
 
 type JobRepository struct {
-	db *DB
+	db *db2.DB
 }
 
-func NewJobRepository(db *DB) *JobRepository {
+func NewJobRepository(db *db2.DB) *JobRepository {
 	return &JobRepository{db}
 }
 

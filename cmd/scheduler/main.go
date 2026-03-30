@@ -5,6 +5,7 @@ import (
 	"job-scheduler/config"
 	"job-scheduler/internal/infrastructure/db"
 	"job-scheduler/internal/infrastructure/rabbitmq"
+	"job-scheduler/internal/infrastructure/repository"
 	"job-scheduler/internal/usecase"
 	"log"
 	"os"
@@ -35,7 +36,7 @@ func main() {
 	}
 	defer rmq.Close()
 
-	jobRepository := db.NewJobRepository(database)
+	jobRepository := repository.NewJobRepository(database)
 
 	s := usecase.NewSchedulerUsecase(jobRepository, rmq, cf.NodeID)
 
