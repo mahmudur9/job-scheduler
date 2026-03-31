@@ -13,12 +13,6 @@ services:
       - job-scheduler-data:/var/opt/mssql
     networks:
       - job-scheduler-network
-    healthcheck:
-      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Mahmudur1234 -Q 'SELECT 1' || exit 1" ]
-      interval: 10s
-      retries: 10
-      start_period: 40s
-      timeout: 10s
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -28,12 +22,6 @@ services:
       - "15673:15672" # UI
     networks:
       - job-scheduler-network
-    healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "status" ]
-      interval: 10s
-      retries: 10
-      start_period: 10s
-      timeout: 5s
 
   api-service1:
     build:
@@ -44,10 +32,6 @@ services:
     depends_on:
       - sqlserver
       - rabbitmq
-#      sqlserver:
-#        condition: service_healthy
-#      rabbitmq:
-#        condition: service_healthy
     environment:
       DB_CONN: "sqlserver://sa:Mahmudur1234@job-scheduler-mssql:1433?database=JobScheduler"
       RABBIT_URL: "amqp://guest:guest@job-scheduler-rabbitmq:5672/"
