@@ -36,6 +36,7 @@ func main() {
 
 	migrations.RunMigration(cf.DBConn)
 	database, _ := db.NewDb(cf.DBConn)
+	defer database.Close()
 
 	jobRepository := repository.NewJobRepository(database)
 

@@ -33,6 +33,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer database.Close()
 
 	rmq, err := rabbitmq.New(cf.RabbitURL)
 	if err != nil {
