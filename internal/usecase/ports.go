@@ -10,7 +10,7 @@ import (
 type JobRepository interface {
 	CreateJob(job *domain.Job) error
 	FetchAndMarkQueued(limit int) ([]domain.Job, error)
-	MarkScheduled(jobID uuid.UUID) error
+	RestoreToScheduled(jobID uuid.UUID) error
 }
 
 type JobExecutionRepository interface {

@@ -26,7 +26,7 @@ func TestScheduler_Run_Success(t *testing.T) {
 				},
 			}, nil
 		},
-		MarkScheduledFn: func(jobID uuid.UUID) error {
+		RestoreToScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}
@@ -92,7 +92,7 @@ func TestScheduler_Run_FetchError(t *testing.T) {
 		FetchAndMarkQueuedFn: func(limit int) ([]domain.Job, error) {
 			return nil, errors.New("db error")
 		},
-		MarkScheduledFn: func(jobID uuid.UUID) error {
+		RestoreToScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}
@@ -153,7 +153,7 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 				},
 			}, nil
 		},
-		MarkScheduledFn: func(jobID uuid.UUID) error {
+		RestoreToScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}
@@ -207,7 +207,7 @@ func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 			time.Sleep(7 * time.Second) // simulate slow DB
 			return nil, nil
 		},
-		MarkScheduledFn: func(jobID uuid.UUID) error {
+		RestoreToScheduledFn: func(jobID uuid.UUID) error {
 			return nil
 		},
 	}

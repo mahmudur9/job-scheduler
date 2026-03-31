@@ -124,7 +124,8 @@ func (s *SchedulerUsecase) publishJob(j domain.Job) {
 
 	err = s.jobQueue.Publish(body)
 	if err != nil {
-		err = s.jobRepository.MarkScheduled(j.Id)
+		// Restore to the previous state like a rollback
+		err = s.jobRepository.RestoreToScheduled(j.Id)
 		if err != nil {
 			s.logger.Error(err, "mark scheduled error")
 		}
