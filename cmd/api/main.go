@@ -7,6 +7,8 @@ import (
 	deliveryHttp "job-scheduler/internal/delivery/http"
 	"job-scheduler/internal/infrastructure/db"
 	"job-scheduler/internal/infrastructure/repository"
+	"job-scheduler/internal/logger"
+	"job-scheduler/internal/middleware"
 	"job-scheduler/internal/migrations"
 	"job-scheduler/internal/usecase"
 	"log"
@@ -30,12 +32,14 @@ func main() {
 
 	cf := config.Load()
 
+	logr := logger.NewLogger()
+
 	migrations.RunMigration(cf.DBConn)
 	database, _ := db.NewDb(cf.DBConn)
 
 	jobRepository := repository.NewJobRepository(database)
 
-	jobUsecase := usecase.NewJobUsecase(jobRepository)
+	jobUsecase := usecase.NewJobUsecase(jobRepository, logr)
 
 	jobHandler := deliveryHttp.NewJobHandler(jobUsecase)
 
@@ -43,9 +47,14 @@ func main() {
 
 	mux.HandleFunc("/jobs", jobHandler.Create)
 
+	handlerWithMiddleware :=
+		middleware.CORSMiddleware(middleware.LoggingMiddleware(logr)(
+			middleware.RecoveryMiddleware(mux),
+		))
+
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: mux,
+		Handler: handlerWithMiddleware,
 	}
 
 	go func() {

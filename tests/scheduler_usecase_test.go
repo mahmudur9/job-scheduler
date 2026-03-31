@@ -49,7 +49,12 @@ func TestScheduler_Run_Success(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockJobRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100)
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	s := usecase.NewSchedulerUsecase(mockJobRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100, mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -110,7 +115,12 @@ func TestScheduler_Run_FetchError(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100)
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100, mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -166,7 +176,12 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100)
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100, mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -215,7 +230,12 @@ func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Second, time.Second*5)
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Second, time.Second*5, mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

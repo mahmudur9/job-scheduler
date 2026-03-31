@@ -6,6 +6,7 @@ import (
 	"job-scheduler/internal/infrastructure/db"
 	"job-scheduler/internal/infrastructure/rabbitmq"
 	"job-scheduler/internal/infrastructure/repository"
+	"job-scheduler/internal/logger"
 	"job-scheduler/internal/usecase"
 	"log"
 	"os"
@@ -25,6 +26,8 @@ func init() {
 func main() {
 	cf := config.Load()
 
+	logr := logger.NewLogger()
+
 	database, err := db.NewDb(cf.DBConn)
 	if err != nil {
 		panic(err)
@@ -38,7 +41,7 @@ func main() {
 
 	jobExecutionRepository := repository.NewJobExecutionRepository(database)
 
-	workerUsecase := usecase.NewWorkerUsecase(jobExecutionRepository, rmq, cf.NodeID)
+	workerUsecase := usecase.NewWorkerUsecase(jobExecutionRepository, rmq, cf.NodeID, logr)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
