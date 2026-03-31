@@ -33,7 +33,7 @@ func (w *WorkerUsecase) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Worker stopping gracefully...")
+			log.Println("Worker stopping...")
 			return
 
 		case msg, ok := <-messages:
