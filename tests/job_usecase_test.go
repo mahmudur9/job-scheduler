@@ -23,7 +23,12 @@ func TestJobUsecase_Create_Success(t *testing.T) {
 		return nil
 	}
 
-	jobUsecase := usecase.NewJobUsecase(mockRepo)
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	jobUsecase := usecase.NewJobUsecase(mockRepo, mockLogger)
 
 	req := &requests.JobRequest{
 		Payload:      "test payload",
@@ -73,7 +78,12 @@ func TestJobUsecase_Create_RepositoryError(t *testing.T) {
 		return expectedErr
 	}
 
-	jobUsecase := usecase.NewJobUsecase(mockRepo)
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	jobUsecase := usecase.NewJobUsecase(mockRepo, mockLogger)
 
 	req := &requests.JobRequest{
 		Payload:      "test payload",

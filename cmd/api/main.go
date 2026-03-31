@@ -39,7 +39,7 @@ func main() {
 
 	jobRepository := repository.NewJobRepository(database)
 
-	jobUsecase := usecase.NewJobUsecase(jobRepository)
+	jobUsecase := usecase.NewJobUsecase(jobRepository, logr)
 
 	jobHandler := deliveryHttp.NewJobHandler(jobUsecase)
 

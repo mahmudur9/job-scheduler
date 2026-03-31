@@ -10,11 +10,13 @@ import (
 
 type JobUsecase struct {
 	jobRepository JobRepository
+	logger        Logger
 }
 
-func NewJobUsecase(jobRepository JobRepository) *JobUsecase {
+func NewJobUsecase(jobRepository JobRepository, logger Logger) *JobUsecase {
 	return &JobUsecase{
 		jobRepository,
+		logger,
 	}
 }
 
@@ -25,5 +27,11 @@ func (j *JobUsecase) Create(jobRequest *requests.JobRequest) error {
 	job.ScheduleTime = jobRequest.ScheduleTime
 	job.Status = "SCHEDULED"
 	job.CreatedAt = time.Now()
-	return j.jobRepository.CreateJob(&job)
+
+	err := j.jobRepository.CreateJob(&job)
+	if err != nil {
+		j.logger.Error(err, "Failed to create job")
+		return err
+	}
+	return nil
 }

@@ -36,3 +36,8 @@ type Message interface {
 	Ack() error
 	Nack(requeue bool) error
 }
+
+type Logger interface {
+	Info(msg string)
+	Error(err error, msg string)
+}

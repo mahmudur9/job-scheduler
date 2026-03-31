@@ -77,7 +77,12 @@ func TestWorker_Start_Success(t *testing.T) {
 		},
 	}
 
-	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1")
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1", mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -109,7 +114,12 @@ func TestWorker_Start_HandleError_ShouldNack(t *testing.T) {
 
 	mockRepo := &mocks.MockJobExecutionRepository{}
 
-	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1")
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1", mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -146,7 +156,12 @@ func TestWorker_Start_ExecutionError_ShouldNack(t *testing.T) {
 		},
 	}
 
-	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1")
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1", mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -183,7 +198,12 @@ func TestWorker_Start_DuplicateJob_ShouldAck(t *testing.T) {
 		},
 	}
 
-	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1")
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1", mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -202,7 +222,12 @@ func TestWorker_Start_ConsumeError(t *testing.T) {
 
 	mockRepo := &mocks.MockJobExecutionRepository{}
 
-	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1")
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1", mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -220,7 +245,12 @@ func TestWorker_Start_GracefulShutdown(t *testing.T) {
 
 	mockRepo := &mocks.MockJobExecutionRepository{}
 
-	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1")
+	mockLogger := &mocks.MockLogger{
+		InfoFn:  func(msg string) {},
+		ErrorFn: func(err error, msg string) {},
+	}
+
+	worker := usecase.NewWorkerUsecase(mockRepo, mockConsumer, "worker-1", mockLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

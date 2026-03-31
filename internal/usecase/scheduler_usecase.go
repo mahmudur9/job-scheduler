@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"job-scheduler/internal/domain"
-	"log"
 	"time"
 )
 
@@ -15,10 +14,11 @@ type SchedulerUsecase struct {
 	nodeId         string
 	fetchInterval  time.Duration
 	lockInterval   time.Duration
+	logger         Logger
 }
 
 func NewSchedulerUsecase(jobRepository JobRepository, lockRepository LockRepository, jobQueue JobQueue, nodeId string,
-	fetchInterval time.Duration, lockInterval time.Duration) *SchedulerUsecase {
+	fetchInterval time.Duration, lockInterval time.Duration, logger Logger) *SchedulerUsecase {
 	return &SchedulerUsecase{
 		jobRepository,
 		lockRepository,
@@ -26,6 +26,7 @@ func NewSchedulerUsecase(jobRepository JobRepository, lockRepository LockReposit
 		nodeId,
 		fetchInterval,
 		lockInterval,
+		logger,
 	}
 }
 
@@ -38,12 +39,12 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 
 	isLeader := false
 
-	log.Println("Scheduler started.")
+	s.logger.Info("Scheduler started.")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Scheduler stopping...")
+			s.logger.Info("Scheduler stopping...")
 			if isLeader {
 				_ = s.lockRepository.Release(ctx, s.nodeId)
 			}
@@ -64,7 +65,7 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 
 			jobs, err := s.jobRepository.FetchAndMarkQueued(10)
 			if err != nil {
-				log.Println("fetch jobs error:", err)
+				s.logger.Error(err, "fetch jobs error")
 				continue
 			}
 
@@ -72,7 +73,7 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 				// Check shutdown signal between jobs too
 				select {
 				case <-ctx.Done():
-					log.Println("Scheduler interrupted during job processing.")
+					s.logger.Info("Scheduler interrupted during job processing.")
 					return
 				default:
 				}
@@ -87,12 +88,12 @@ func (s *SchedulerUsecase) Run(ctx context.Context) {
 func (s *SchedulerUsecase) acquireLock(ctx context.Context, isLeader bool) (bool, error) {
 	ok, err := s.lockRepository.TryAcquire(ctx, s.nodeId)
 	if err != nil {
-		log.Println("lock acquire error:", err)
+		s.logger.Error(err, "lock acquire error")
 		return isLeader, err
 	}
 
 	if ok && !isLeader {
-		log.Println("Became leader:", s.nodeId)
+		s.logger.Info("Became leader:" + s.nodeId)
 		isLeader = true
 		return isLeader, nil
 	}
@@ -101,7 +102,7 @@ func (s *SchedulerUsecase) acquireLock(ctx context.Context, isLeader bool) (bool
 	if isLeader {
 		err := s.lockRepository.Renew(ctx, s.nodeId)
 		if err != nil {
-			log.Println("lock renew error:", err)
+			s.logger.Error(err, "lock renew error")
 			isLeader = false
 		}
 	}
@@ -117,7 +118,7 @@ func (s *SchedulerUsecase) publishJob(j domain.Job) {
 
 	body, err := json.Marshal(msg)
 	if err != nil {
-		log.Println("marshal error:", err)
+		s.logger.Error(err, "marshal error")
 		return
 	}
 
@@ -125,8 +126,8 @@ func (s *SchedulerUsecase) publishJob(j domain.Job) {
 	if err != nil {
 		err = s.jobRepository.MarkScheduled(j.Id)
 		if err != nil {
-			log.Println("mark scheduled error:", err)
+			s.logger.Error(err, "mark scheduled error")
 		}
 	}
-	log.Println("publish error:", err)
+	s.logger.Error(err, "publish error")
 }

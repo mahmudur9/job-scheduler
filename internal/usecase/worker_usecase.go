@@ -3,48 +3,50 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"job-scheduler/internal/domain"
-	"log"
 )
 
 type WorkerUsecase struct {
 	jobExecutionRepository JobExecutionRepository
 	jobConsumer            JobConsumer
 	workerId               string
+	logger                 Logger
 }
 
-func NewWorkerUsecase(jobExecutionRepository JobExecutionRepository, jobConsumer JobConsumer, workerId string) *WorkerUsecase {
+func NewWorkerUsecase(jobExecutionRepository JobExecutionRepository, jobConsumer JobConsumer, workerId string, logger Logger) *WorkerUsecase {
 	return &WorkerUsecase{
 		jobExecutionRepository,
 		jobConsumer,
 		workerId,
+		logger,
 	}
 }
 
 func (w *WorkerUsecase) Start(ctx context.Context) {
 	messages, err := w.jobConsumer.Consume("jobs")
 	if err != nil {
-		log.Println("failed to start consuming:", err)
+		w.logger.Error(err, "failed to start consuming")
 		return
 	}
 
-	log.Println("Worker started.")
+	w.logger.Info("Worker started.")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Worker stopping...")
+			w.logger.Info("Worker stopping...")
 			return
 
 		case msg, ok := <-messages:
 			if !ok {
-				log.Println("RabbitMQ channel closed. Worker stopping...")
+				w.logger.Info("RabbitMQ channel closed. Worker stopping...")
 				return
 			}
 
 			err := w.handle(msg.Body())
 			if err != nil {
-				log.Println("handle error:", err)
+				w.logger.Error(err, "handle error")
 				_ = msg.Nack(true) // requeue on failure
 			} else {
 				_ = msg.Ack()
@@ -71,7 +73,7 @@ func (w *WorkerUsecase) handle(body []byte) error {
 
 	if !ok {
 		// Already processed OR another worker is processing
-		log.Println("Skipping duplicate job:", msg.JobId)
+		w.logger.Info(fmt.Sprintf("Skipping duplicate job: %s", msg.JobId))
 		return nil
 	}
 
