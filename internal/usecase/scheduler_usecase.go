@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"job-scheduler/internal/domain"
 	"time"
 )
@@ -122,13 +123,14 @@ func (s *SchedulerUsecase) publishJob(j domain.Job) {
 		return
 	}
 
-	err = s.jobQueue.Publish(body)
-	if err != nil {
+	if pubErr := s.jobQueue.Publish(body); pubErr != nil {
+		s.logger.Error(pubErr, "publish error")
 		// Restore to the previous state like a rollback
-		err = s.jobRepository.RestoreToScheduled(j.Id)
-		if err != nil {
-			s.logger.Error(err, "mark scheduled error")
+		if restoreErr := s.jobRepository.RestoreToScheduled(j.Id); restoreErr != nil {
+			s.logger.Error(restoreErr, "mark scheduled error")
+			return
 		}
 	}
-	s.logger.Error(err, "publish error")
+
+	s.logger.Info(fmt.Sprintf("job published successfully with jobId: %s", j.Id))
 }
