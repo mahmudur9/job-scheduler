@@ -12,7 +12,7 @@ type MockJobRepository struct {
 
 	CreateJobFunc        func(job *domain.Job) error
 	FetchAndMarkQueuedFn func(limit int) ([]domain.Job, error)
-	MarkScheduledFn      func(jobID uuid.UUID) error
+	RestoreToScheduledFn func(jobID uuid.UUID) error
 
 	FetchCalled int
 	MarkCalled  int
@@ -30,10 +30,10 @@ func (m *MockJobRepository) FetchAndMarkQueued(limit int) ([]domain.Job, error) 
 	return m.FetchAndMarkQueuedFn(limit)
 }
 
-func (m *MockJobRepository) MarkScheduled(jobID uuid.UUID) error {
+func (m *MockJobRepository) RestoreToScheduled(jobID uuid.UUID) error {
 	m.mu.Lock()
 	m.MarkCalled++
 	m.mu.Unlock()
 
-	return m.MarkScheduledFn(jobID)
+	return m.RestoreToScheduledFn(jobID)
 }

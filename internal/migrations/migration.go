@@ -18,6 +18,7 @@ func create(dbConn string, path string) {
 	if err != nil {
 		log.Fatalf("Failed to run migration: %v", err)
 	}
+	defer database.Close()
 }
 
 func RunMigration(dbConn string) {

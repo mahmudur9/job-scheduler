@@ -52,7 +52,7 @@ func (j *JobRepository) FetchAndMarkQueued(limit int) ([]domain.Job, error) {
 	return jobs, nil
 }
 
-func (j *JobRepository) MarkScheduled(jobId uuid.UUID) error {
+func (j *JobRepository) RestoreToScheduled(jobId uuid.UUID) error {
 	_, err := j.db.Conn.Exec(`
 		UPDATE Jobs
 		SET Status = 'SCHEDULED'

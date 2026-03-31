@@ -36,6 +36,7 @@ func main() {
 
 	migrations.RunMigration(cf.DBConn)
 	database, _ := db.NewDb(cf.DBConn)
+	defer database.Close()
 
 	jobRepository := repository.NewJobRepository(database)
 
@@ -43,13 +44,14 @@ func main() {
 
 	jobHandler := deliveryHttp.NewJobHandler(jobUsecase)
 
-	mux := http.NewServeMux()
+	router := deliveryHttp.NewRouter()
 
-	mux.HandleFunc("/jobs", jobHandler.Create)
+	// routes
+	router.POST("/jobs", jobHandler.Create)
 
 	handlerWithMiddleware :=
 		middleware.CORSMiddleware(middleware.LoggingMiddleware(logr)(
-			middleware.RecoveryMiddleware(mux),
+			middleware.RecoveryMiddleware(router),
 		))
 
 	server := &http.Server{
