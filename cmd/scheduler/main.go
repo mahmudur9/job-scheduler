@@ -40,7 +40,7 @@ func main() {
 	jobRepo := repository.NewJobRepository(database)
 	lockRepo := repository.NewLockRepository(database)
 
-	s := usecase.NewSchedulerUsecase(jobRepo, lockRepo, rmq, cf.NodeID, time.Second, cf.LockInterval*time.Second)
+	s := usecase.NewSchedulerUsecase(jobRepo, lockRepo, rmq, cf.NodeID, cf.FetchInterval*time.Second, cf.LockInterval*time.Second)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
