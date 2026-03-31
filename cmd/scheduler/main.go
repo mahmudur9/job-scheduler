@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -39,7 +40,7 @@ func main() {
 	jobRepo := repository.NewJobRepository(database)
 	lockRepo := repository.NewLockRepository(database)
 
-	s := usecase.NewSchedulerUsecase(jobRepo, lockRepo, rmq, cf.NodeID)
+	s := usecase.NewSchedulerUsecase(jobRepo, lockRepo, rmq, cf.NodeID, time.Second, cf.LockInterval*time.Second)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

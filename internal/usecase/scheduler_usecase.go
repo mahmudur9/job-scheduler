@@ -13,22 +13,27 @@ type SchedulerUsecase struct {
 	lockRepository LockRepository
 	jobQueue       JobQueue
 	nodeId         string
+	fetchInterval  time.Duration
+	lockInterval   time.Duration
 }
 
-func NewSchedulerUsecase(jobRepository JobRepository, lockRepository LockRepository, jobQueue JobQueue, nodeId string) *SchedulerUsecase {
+func NewSchedulerUsecase(jobRepository JobRepository, lockRepository LockRepository, jobQueue JobQueue, nodeId string,
+	fetchInterval time.Duration, lockInterval time.Duration) *SchedulerUsecase {
 	return &SchedulerUsecase{
 		jobRepository,
 		lockRepository,
 		jobQueue,
 		nodeId,
+		fetchInterval,
+		lockInterval,
 	}
 }
 
 func (s *SchedulerUsecase) Run(ctx context.Context) {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(s.fetchInterval)
 	defer ticker.Stop()
 
-	lockTicker := time.NewTicker(5 * time.Second) // renew lock
+	lockTicker := time.NewTicker(s.lockInterval) // renew lock
 	defer lockTicker.Stop()
 
 	isLeader := false
