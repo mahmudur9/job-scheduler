@@ -49,12 +49,12 @@ func TestScheduler_Run_Success(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockJobRepo, mockLockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockJobRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(7 * time.Second)
+		time.Sleep(300 * time.Millisecond)
 		cancel()
 	}()
 
@@ -110,12 +110,12 @@ func TestScheduler_Run_FetchError(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(7 * time.Second)
+		time.Sleep(300 * time.Millisecond)
 		cancel()
 	}()
 
@@ -166,12 +166,12 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Millisecond*100, time.Millisecond*100)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(7 * time.Second)
+		time.Sleep(300 * time.Millisecond)
 		cancel()
 	}()
 
@@ -215,7 +215,7 @@ func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 		},
 	}
 
-	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1")
+	s := usecase.NewSchedulerUsecase(mockRepo, mockLockRepo, mockQueue, "node-1", time.Second, time.Second*5)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
