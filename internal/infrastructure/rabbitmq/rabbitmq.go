@@ -53,13 +53,6 @@ func (m *RabbitMQ) connect() error {
 		return err
 	}
 
-	_, err = ch.QueueDeclare("jobs", true, false, false, false, nil)
-	if err != nil {
-		ch.Close()
-		conn.Close()
-		return err
-	}
-
 	// swap safely and close old resources
 	m.mu.Lock()
 	oldConn := m.conn
@@ -141,13 +134,13 @@ func (m *RabbitMQ) getChannel() (*amqp091.Channel, error) {
 	return m.ch, nil
 }
 
-func (m *RabbitMQ) Consume(queue string) (<-chan usecase.Message, error) {
+func (m *RabbitMQ) Consume(routingKey string, queue string) (<-chan usecase.Message, error) {
 	out := make(chan usecase.Message)
-	go m.consumeLoop(queue, out)
+	go m.consumeLoop(routingKey, queue, out)
 	return out, nil
 }
 
-func (m *RabbitMQ) consumeLoop(queue string, out chan<- usecase.Message) {
+func (m *RabbitMQ) consumeLoop(routingKey string, queue string, out chan<- usecase.Message) {
 	defer close(out)
 
 	for {
@@ -156,6 +149,18 @@ func (m *RabbitMQ) consumeLoop(queue string, out chan<- usecase.Message) {
 			if !m.waitForReconnect() {
 				return
 			}
+			continue
+		}
+
+		if err := ch.ExchangeDeclare("job-scheduler-exchange", "direct", true, false, false, false, nil); err != nil {
+			continue
+		}
+		_, err = ch.QueueDeclare(queue, true, false, false, false, nil)
+		if err != nil {
+			continue
+		}
+
+		if err := ch.QueueBind(queue, routingKey, "job-scheduler-exchange", false, nil); err != nil {
 			continue
 		}
 
@@ -194,15 +199,15 @@ func (m *RabbitMQ) waitForReconnect() bool {
 	}
 }
 
-func (m *RabbitMQ) Publish(body []byte) error {
+func (m *RabbitMQ) Publish(body []byte, routingKey string) error {
 	for i := 0; i < 2; i++ {
 		ch, err := m.getChannel()
 		if err != nil {
 			log.Printf("[rabbitmq] publish: channel unavailable")
 		} else {
 			err = ch.Publish(
-				"",
-				"jobs",
+				"job-scheduler-exchange",
+				routingKey,
 				false,
 				false,
 				amqp091.Publishing{

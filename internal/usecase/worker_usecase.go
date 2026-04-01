@@ -24,7 +24,7 @@ func NewWorkerUsecase(jobExecutionRepository JobExecutionRepository, jobConsumer
 }
 
 func (w *WorkerUsecase) Start(ctx context.Context) {
-	messages, err := w.jobConsumer.Consume("jobs")
+	messages, err := w.jobConsumer.Consume("jobs", "jobs:queue")
 	if err != nil {
 		w.logger.Error(err, "failed to start consuming")
 		return

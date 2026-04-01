@@ -44,7 +44,7 @@ func TestScheduler_Run_Success(t *testing.T) {
 	}
 
 	mockQueue := &mocks.MockJobQueue{
-		PublishFn: func(body []byte) error {
+		PublishFn: func(body []byte, routingKey string) error {
 			return nil
 		},
 	}
@@ -110,7 +110,7 @@ func TestScheduler_Run_FetchError(t *testing.T) {
 	}
 
 	mockQueue := &mocks.MockJobQueue{
-		PublishFn: func(body []byte) error {
+		PublishFn: func(body []byte, routingKey string) error {
 			return nil
 		},
 	}
@@ -171,7 +171,7 @@ func TestScheduler_Run_PublishError(t *testing.T) {
 	}
 
 	mockQueue := &mocks.MockJobQueue{
-		PublishFn: func(body []byte) error {
+		PublishFn: func(body []byte, routingKey string) error {
 			return errors.New("queue down")
 		},
 	}
@@ -225,7 +225,7 @@ func TestScheduler_Run_GracefulShutdown(t *testing.T) {
 	}
 
 	mockQueue := &mocks.MockJobQueue{
-		PublishFn: func(body []byte) error {
+		PublishFn: func(body []byte, routingKey string) error {
 			return nil
 		},
 	}

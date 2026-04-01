@@ -123,7 +123,7 @@ func (s *SchedulerUsecase) publishJob(j domain.Job) {
 		return
 	}
 
-	if pubErr := s.jobQueue.Publish(body); pubErr != nil {
+	if pubErr := s.jobQueue.Publish(body, "jobs"); pubErr != nil {
 		s.logger.Error(pubErr, "publish error")
 		// Restore to the previous state like a rollback
 		if restoreErr := s.jobRepository.RestoreToScheduled(j.Id); restoreErr != nil {
