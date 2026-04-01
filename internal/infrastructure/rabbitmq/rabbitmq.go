@@ -140,6 +140,18 @@ func (m *RabbitMQ) Consume(routingKey string, queue string) (<-chan usecase.Mess
 	return out, nil
 }
 
+func (m *RabbitMQ) setupQueue(ch *amqp091.Channel, queue, routingKey string) error {
+	if err := ch.ExchangeDeclare("job-scheduler-exchange", "direct", true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	if _, err := ch.QueueDeclare(queue, true, false, false, false, nil); err != nil {
+		return err
+	}
+
+	return ch.QueueBind(queue, routingKey, "job-scheduler-exchange", false, nil)
+}
+
 func (m *RabbitMQ) consumeLoop(routingKey string, queue string, out chan<- usecase.Message) {
 	defer close(out)
 
@@ -152,15 +164,7 @@ func (m *RabbitMQ) consumeLoop(routingKey string, queue string, out chan<- useca
 			continue
 		}
 
-		if err := ch.ExchangeDeclare("job-scheduler-exchange", "direct", true, false, false, false, nil); err != nil {
-			continue
-		}
-		_, err = ch.QueueDeclare(queue, true, false, false, false, nil)
-		if err != nil {
-			continue
-		}
-
-		if err := ch.QueueBind(queue, routingKey, "job-scheduler-exchange", false, nil); err != nil {
+		if err := m.setupQueue(ch, queue, routingKey); err != nil {
 			continue
 		}
 
