@@ -24,11 +24,11 @@ type LockRepository interface {
 }
 
 type JobQueue interface {
-	Publish(body []byte) error
+	Publish(body []byte, routingKey string) error
 }
 
 type JobConsumer interface {
-	Consume(queueName string) (<-chan Message, error)
+	Consume(routingKey string, queueName string) (<-chan Message, error)
 }
 
 type Message interface {

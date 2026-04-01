@@ -43,7 +43,7 @@ type MockConsumer struct {
 	Err      error
 }
 
-func (m *MockConsumer) Consume(queueName string) (<-chan usecase.Message, error) {
+func (m *MockConsumer) Consume(routingKey string, queueName string) (<-chan usecase.Message, error) {
 	if m.Err != nil {
 		return nil, m.Err
 	}
